@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: pgbouncer-shared
+  labels:
+    app: pgbouncer
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      # Ensure replicas are spread across nodes for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - pgbouncer
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: pgbouncer
+        # Update to the latest version built from our Dockerfile
+        image: harbor-instance-book-of-tests.serpro-services.sa-df1-a.gdc.serpro/pgbouncer/pgbouncer:1.24.1
+        args:
+          - /etc/pgbouncer/pgbouncer.ini
+        ports:
+        - name: pgbouncer
+          containerPort: 6432
+        readinessProbe:
+          tcpSocket:
+            port: 6432
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 6432
+          initialDelaySeconds: 15 # Give it more time than the readiness probe
+          periodSeconds: 20
+        # Adjust these values based on observed performance.
+        resources:
+          requests:
+            cpu: "250m" # 25% of a vCPU
+            memory: "128Mi"
+          limits:
+            cpu: "500m" # 50% of a vCPU
+            memory: "256Mi"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/pgbouncer
+          readOnly: true
+        - name: secrets
+          mountPath: /etc/pgbouncer/secrets
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: pgbouncer-config
+      - name: secrets
+        secret:
+          secretName: pgbouncer-userlist

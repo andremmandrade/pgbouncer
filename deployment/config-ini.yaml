@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgbouncer-config
+  namespace: pgbouncer-shared
+data:
+  pgbouncer.ini: |
+    [pgbouncer]
+    listen_addr = *
+    listen_port = 6432
+
+    ; Use a secure authentication method
+    auth_type = md5
+    auth_file = /etc/pgbouncer/secrets/userlist.txt
+
+    ; Administrative and monitoring setup
+    admin_users = pgbounceradmin
+    stats_users = pgbouncermetrics
+
+    ; Log settings
+    log_connections = 1
+    log_disconnections = 1
+    log_pooler_errors = 1
+    stats_period = 60
+
+    ; Connection pool settings
+    default_pool_size = 20
+    max_client_conn = 1000
+    pool_mode = transaction
+
+    [databases]
+    # This is the core of the multi-tenant configuration.
+    # Applications will connect to "app1_db" or "app2_db" on the PgBouncer service IP.
+    # PgBouncer will then proxy the connection to the real database host.
+    # The 'dbname' parameter on the host string is optional if it matches the virtual name.
+    app1_db = host=10.1.2.10 port=5432 dbname=app1_prod_db
+    app2_db = host=10.1.2.20 port=5432 dbname=app2_prod_db
+    # Add more databases for other services here
