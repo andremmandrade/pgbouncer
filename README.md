@@ -77,6 +77,8 @@ Applications connect to the PgBouncer service instead of directly to the Postgre
 
 ### PgBouncer Configuration (`pgbouncer.ini`)
 
+For a complete list of all configuration options, please refer to the PGBouncer official documentation.
+
 The main configuration is located in `deployment/config-ini.yaml`. Key settings include:
 
 *   `listen_addr` & `listen_port`: Set to `*` and `6432` to listen on all interfaces inside the pod.
