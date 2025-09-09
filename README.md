@@ -2,27 +2,47 @@
 
 This repository contains the configuration and deployment manifests for running a highly-available, multi-tenant PgBouncer instance on Kubernetes. This setup is designed to serve as a centralized connection pooler for various applications, reducing the number of direct connections to your PostgreSQL databases and improving overall performance and resource management.
 
- <!-- Replace with a real diagram URL -->
+## What is PgBouncer?
+
+PgBouncer is a lightweight connection pooler for PostgreSQL. It sits between your application and your PostgreSQL database server.
+
+### The Problem It Solves
+
+PostgreSQL handles new client connections by forking a new backend process. This model, while robust, can become a performance bottleneck under heavy load, especially with applications that frequently open and close short-lived connections. Each new connection consumes significant time and memory, which can lead to resource exhaustion on the database server.
+
+### How PgBouncer Helps
+
+PgBouncer manages a pool of connections to the actual database. When an application requests a connection, PgBouncer gives it a pre-established connection from its pool instead of creating a new one on the database server. This has several key benefits:
+
+*   **Improved Performance**: Reduces the latency and CPU overhead associated with creating new database connections.
+*   **Resource Management**: Limits the total number of active connections to the database, preventing it from becoming overloaded.
+*   **Scalability**: Allows a large number of application clients to be served by a much smaller number of actual database connections, enabling the database to support more clients.
+
+This is especially effective for serverless applications or microservices that may generate a high volume of concurrent, intermittent connections.
+
 ```mermaid
 graph TD
     subgraph "Kubernetes Cluster"
+        subgraph "App Namespaces"
+            App1(App 1)
+            App2(App 2)
+        end
         subgraph "Namespace: pgbouncer-shared"
-            A[App 1] --> Svc;
-            B[App 2] --> Svc;
+            App1 --> Svc;
+            App2 --> Svc;
 
-            Svc(pgbouncer-svc<br/>ClusterIP Service) --> P1;
-            Svc --> P2;
-            Svc --> P3;
+            Svc(pgbouncer-lb<br/>LoadBalancer Service) --> P1[Pod: pgbouncer-1];
+            Svc --> P2[Pod: pgbouncer-2];
+            Svc --> P3[Pod: pgbouncer-3];
 
-            P1[Pod: pgbouncer-1] -- Manages pool --> DB1[(PostgreSQL 1<br/>app1_prod_db)];
-            P2[Pod: pgbouncer-2] -- Manages pool --> DB1;
-            P3[Pod: pgbouncer-3] -- Manages pool --> DB2[(PostgreSQL 2<br/>app2_prod_db)];
-            
             subgraph "PgBouncer Deployment (HA)"
-                P1 & P2 & P3
+                direction LR
+                P1 -- Manages pool --> DB1[(PostgreSQL 1<br/>app1_prod_db)];
+                P2 -- Manages pool --> DB1;
+                P3 -- Manages pool --> DB2[(PostgreSQL 2<br/>app2_prod_db)];
             end
 
-            P1 & P2 & P3 --> C((ConfigMap<br/>pgbouncer.ini));
+            P1 & P2 & P3 --> Cfg((ConfigMap<br/>pgbouncer.ini));
             P1 & P2 & P3 --> Sec((Secret<br/>userlist.txt));
         end
     end
