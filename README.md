@@ -77,7 +77,7 @@ Applications connect to the PgBouncer service instead of directly to the Postgre
 
 ### PgBouncer Configuration (`pgbouncer.ini`)
 
-For a complete list of all configuration options, please refer to the PGBouncer official documentation.
+For a complete list of all configuration options, please refer to the [PGBouncer official documentation](https://www.pgbouncer.org/config.html).
 
 The main configuration is located in `deployment/config-ini.yaml`. Key settings include:
 
